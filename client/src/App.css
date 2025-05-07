@@ -1,0 +1,89 @@
+html, body, #root {
+    height: 100%;
+    margin: 0;
+}
+
+.App {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex-grow: 1;
+}
+
+
+/* Добавляем в global CSS или SCSS */
+.transform-hover:hover {
+    transform: scale(1.05); /* Немного увеличиваем размер при наведении */
+    transition: transform 0.3s ease-in-out;
+}
+
+
+/* В файле стилей, например, App.css или Pages.css */
+.pagination-custom {
+    position: fixed;
+    bottom: 100px; /* Отступ от нижнего края страницы */
+    left: 50%; /* Центрируем пагинацию по горизонтали */
+    transform: translateX(-50%); /* Корректируем для точного выравнивания по центру */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* Отступ между элементами пагинации */
+    z-index: 1000; /* Чтобы пагинация была поверх другого контента */
+    font-size: 20px;
+  }
+  
+
+
+ /* В файле App.css или Admin.css */
+
+/* Общие стили для админ панели */
+.admin-container {
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+  }
+  
+  /* Стиль для заголовка */
+  .admin-container h2 {
+    font-family: 'Arial', sans-serif;
+    color: #333;
+    font-weight: bold;
+  }
+  
+  /* Стили для кнопок-карточек */
+  .admin-btn {
+    border-radius: 12px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Более плавная анимация */
+    text-align: left;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-size: 1.1rem;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-weight: 600;
+    color: #333;
+    height: 100%;
+  }
+  
+  .admin-btn:hover {
+    transform: translateY(-4px); /* Чуть менее резкое поднятие */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: #bbb;
+  }  
+  
+  .admin-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+  }
+  
+  /* Стили для текста на кнопках */
+  .admin-btn span {
+    font-size: 1.1rem;
+    color: #333;
+  }
+  

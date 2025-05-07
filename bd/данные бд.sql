@@ -4,8 +4,6 @@ INSERT INTO brand (id, name, "createdAt", "updatedAt") VALUES
 (2, 'Samsung', NOW(), NOW()),
 (3, 'Xiaomi', NOW(), NOW()),
 (4, 'Google', NOW(), NOW()),
-
-INSERT INTO brand (id, name, "createdAt", "updatedAt") VALUES
 (5, 'Huawei', NOW(), NOW()),
 (6, 'OnePlus', NOW(), NOW()),
 (7, 'Sony', NOW(), NOW()),
@@ -34,9 +32,13 @@ VALUES
 
   SELECT * FROM device
 
+UPDATE device
+SET img = REPLACE(img, '.jpg', '.webp')
+WHERE img LIKE '%.jpg';
+
 
   -- Заполнение таблицы device_info
-  TRUNCATE TABLE device_info RESTART IDENTITY CASCADE;
+  -- TRUNCATE TABLE device_info RESTART IDENTITY CASCADE;
   
 INSERT INTO device_info ("title", "description", "createdAt", "updatedAt", "deviceId")
 VALUES
@@ -93,45 +95,93 @@ VALUES
     SELECT * FROM device_info
 
 -- Заполнение таблицы user (пользователи)
-INSERT INTO "user" (id, email, "createdAt", "updatedAt")
-VALUES
-  (1, 'user1@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  (2, 'user2@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  (3, 'user3@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  (4, 'user4@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+-- INSERT INTO "user" (id, email, "createdAt", "updatedAt")
+-- VALUES
+--   (1, 'user1@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+--   (2, 'user2@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+--   (3, 'user3@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+--   (4, 'user4@example.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-	SELECT * FROM "user"
+-- 	SELECT * FROM "user"
 
 
 	-- Заполнение таблицы basket (корзины пользователей)
-INSERT INTO basket (id, "createdAt", "updatedAt", "userId")
-VALUES
-  (1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1),
-  (2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2),
-  (3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3),
-  (4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 4);
+-- INSERT INTO basket (id, "createdAt", "updatedAt", "userId")
+-- VALUES
+--   (1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1),
+--   (2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2),
+--   (3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3),
+--   (4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 4);
 
-SELECT * FROM basket
+-- SELECT * FROM basket
 
 
 -- Заполнение таблицы basket_device (связь корзины и устройств)
-INSERT INTO basket_device (id, quantity, "createdAt", "updatedAt", "basketId", "deviceId")
+-- INSERT INTO basket_device (id, quantity, "createdAt", "updatedAt", "basketId", "deviceId")
+-- VALUES
+--   (1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 1),  -- Корзина 1, iPhone 12
+--   (2, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 2),  -- Корзина 1, Samsung Galaxy S21
+--   (3, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2, 3),  -- Корзина 2, Xiaomi Mi 11
+--   (4, 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2, 4),  -- Корзина 2, Oppo Reno 6
+--   (5, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3, 1),  -- Корзина 3, iPhone 12
+--   (6, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3, 5),  -- Корзина 3, Huawei P40
+--   (7, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 4, 6);  -- Корзина 4, OnePlus 9
+
+-- SELECT * FROM basket_device
+
+
+
+-- SELECT device.name AS device_name, sale_price, rating
+-- FROM device
+-- JOIN brand ON device."brandId" = brand.id
+-- WHERE brand.name = 'Apple';
+
+
+-- select * from device
+
+INSERT INTO "order" ("userId", "deviceId", "quantity", "createdAt", "updatedAt")
 VALUES
-  (1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 1),  -- Корзина 1, iPhone 12
-  (2, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, 2),  -- Корзина 1, Samsung Galaxy S21
-  (3, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2, 3),  -- Корзина 2, Xiaomi Mi 11
-  (4, 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 2, 4),  -- Корзина 2, Oppo Reno 6
-  (5, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3, 1),  -- Корзина 3, iPhone 12
-  (6, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 3, 5),  -- Корзина 3, Huawei P40
-  (7, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 4, 6);  -- Корзина 4, OnePlus 9
-
-SELECT * FROM basket_device
+(1, 2, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(2, 3, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(3, 4, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1, 5, 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(2, 6, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 
+select * from "order"
 
-SELECT device.name AS device_name, sale_price, rating
-FROM device
-JOIN brand ON device."brandId" = brand.id
-WHERE brand.name = 'Apple';
+SELECT COUNT(*) FROM "user";
+SELECT COUNT(*) FROM "order";
+SELECT SUM("quantity") FROM "order";
 
 
+-- Добавляем колонку date_of_birth типа DATE
+ALTER TABLE "user"
+ADD COLUMN date_of_birth DATE NOT NULL DEFAULT '2000-01-01';
+
+select * from "user"
+
+
+-- Добавляем колонку discount в таблицу device
+ALTER TABLE device
+ADD COLUMN discount NUMERIC(12, 2) DEFAULT 0 NOT NULL;
+
+
+-- Добавим новое поле commission в таблицу device, чтобы туда сохранять комиссию.
+ALTER TABLE device ADD COLUMN commission DECIMAL(10, 2) DEFAULT 0;
+
+
+ALTER TABLE "user"
+ADD COLUMN phone VARCHAR(20);
+
+ALTER TABLE device
+ADD COLUMN commission DECIMAL(10,2);
+
+
+ALTER TABLE "user"
+ADD COLUMN first_name VARCHAR(255),
+ADD COLUMN last_name VARCHAR(255);
+
+
+
+select * from device

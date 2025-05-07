@@ -134,7 +134,7 @@ BEGIN
     SELECT sale_price INTO v_price FROM device WHERE id = p_device_id;
 
     -- Увеличиваем цену на 10% если меньше 60000, иначе на 5%
-    IF v_price < 60000 THEN
+    IF v_price < 70000 THEN
         UPDATE device SET sale_price = sale_price * 1.10 WHERE id = p_device_id;
     ELSE
         UPDATE device SET sale_price = sale_price * 1.05 WHERE id = p_device_id;
@@ -171,7 +171,6 @@ SELECT id, name, sale_price FROM device WHERE "brandId" = 2;
 
 
 -- 4
--- Этот запрос создает процедуру DecreaseDiscounts, которая уменьшает скидку на все объекты недвижимости в таблице RealEstate. 
 -- Скидка уменьшается на 1% от текущей величины скидки (в денежном выражении) до тех пор, пока средняя скидка не станет меньше 5% от средней цены объектов недвижимости. 
 -- Процедура использует цикл LOOP (аналог цикла REPEAT в других СУБД) для выполнения операции.
 CREATE OR REPLACE PROCEDURE DecreaseDiscounts()
@@ -284,3 +283,345 @@ WHERE b.name = 'Apple';
 
 
 select * from device
+
+
+
+
+
+-- лаб 8 - 9
+-- Триггер: При обнулении количества товара на складе автоматически удаляются все записи этого устройства из корзин пользователей
+
+CREATE OR REPLACE FUNCTION delete_from_basket_when_stock_empty()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.quantity_in_stock = 0 THEN
+        DELETE FROM "basket_device"
+        WHERE "deviceId" = NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_delete_from_basket_when_stock_empty
+AFTER UPDATE ON "device"
+FOR EACH ROW
+EXECUTE FUNCTION delete_from_basket_when_stock_empty();
+
+
+SELECT * FROM "basket_device" WHERE "deviceId" = 5;
+
+-- Уменьшаем количество смартфона до 0
+UPDATE "device"	
+SET quantity_in_stock = 0
+WHERE id = 5;
+
+-- Проверяем, остались ли такие товары в корзинах
+SELECT * FROM "basket_device" WHERE "deviceId" = 5;
+
+
+DROP TRIGGER IF EXISTS trigger_delete_from_basket_on_stock_empty ON device;
+DROP FUNCTION IF EXISTS delete_from_basket_when_out_of_stock;
+
+
+ALTER TABLE device 
+    ALTER COLUMN quantity_in_stock SET NOT NULL,
+    ALTER COLUMN quantity_in_stock SET DEFAULT 0,
+    ALTER COLUMN quantity_in_stock TYPE INTEGER;
+
+
+
+-- Триггер проверяет, что при добsавлении нового пользователя в таблицу "user"
+-- его возраст больше или равен 18 лет, исходя из даты в поле "createdAt".
+-- Если возраст меньше 18 лет, вставка будет заблокирована с ошибкой.
+
+-- Функция для проверки, что пользователю больше 18 лет
+CREATE OR REPLACE FUNCTION check_user_age()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Проверяем возраст по дате рождения
+  IF (DATE_PART('year', AGE(NEW.date_of_birth)) < 18) THEN
+    RAISE EXCEPTION 'Пользователь должен быть старше 18 лет';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Триггер для проверки перед вставкой пользователя
+CREATE TRIGGER trigger_check_user_age
+BEFORE INSERT ON "user"
+FOR EACH ROW
+EXECUTE FUNCTION check_user_age();
+
+
+-- Попытка добавить пользователя младше 18 лет (будет ошибка)
+INSERT INTO "user" (email, password, role, "createdAt", "updatedAt", date_of_birth) 
+VALUES ('younguser@example.com', 'password123', 'USER', NOW(), NOW(), '2010-01-01');
+
+-- Попытка добавить взрослого пользователя (будет успех)
+INSERT INTO "user" (email, password, role, "createdAt", "updatedAt", date_of_birth) 
+VALUES ('adultuser@example.com', 'password123', 'USER', NOW(), NOW(), '1990-01-01');
+
+
+
+
+-- Триггер автоматически вычисляет скидку 5% от цены продажи (sale_price) при добавлении нового смартфона.
+
+CREATE OR REPLACE FUNCTION calculate_device_discount()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.discount = NEW.sale_price * 0.05;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calculate_device_discount
+BEFORE INSERT ON device
+FOR EACH ROW
+EXECUTE FUNCTION calculate_device_discount();
+
+-- Добавляем новое устройство
+INSERT INTO device (id, name, purchase_price, sale_price, rating, img, discount, "brandId", "typeId", "createdAt", "updatedAt")
+VALUES (100, 'Galaxy S210', 800, 10000, 5, 'galaxy-s22.jpg', 0, 1, 1, NOW(), NOW());
+
+-- Проверяем
+SELECT * FROM device WHERE name = 'Galaxy S210';
+
+
+
+
+-- Триггер для автоматического расчета комиссии:
+CREATE OR REPLACE FUNCTION calculate_device_commission()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Предположим, комиссия всегда 5%
+  NEW.commission = NEW.sale_price * 5 / 100;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calculate_device_commission
+BEFORE INSERT ON device
+FOR EACH ROW
+EXECUTE FUNCTION calculate_device_commission();
+
+
+-- Добавляем новое устройство
+INSERT INTO device (id, name, purchase_price, sale_price, rating, img, discount, commission, "brandId", "typeId", "createdAt", "updatedAt")
+VALUES (16, 'iPhone 15', 800, 1200, 5, 'iphone15.jpg', 0, 0, 1, 1, NOW(), NOW());
+
+-- Смотрим, что получилось
+SELECT id, name, sale_price, commission
+FROM device
+WHERE id = 16;
+
+
+
+-- Задание 5. Триггер на проверку уникальности номера телефона в таблице user
+CREATE OR REPLACE FUNCTION check_unique_user_phone()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Проверка: если существует другой клиент с таким же номером
+  IF EXISTS (SELECT 1 FROM "user" WHERE phone = NEW.phone) THEN
+    RAISE EXCEPTION 'Номер телефона не уникален';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_unique_user_phone
+BEFORE INSERT ON "user"
+FOR EACH ROW
+EXECUTE FUNCTION check_unique_user_phone();
+
+
+
+-- Успешная вставка пользователя с уникальным номером
+INSERT INTO "user" (email, password, role, phone, "createdAt", "updatedAt")
+VALUES ('ivanov1@example.com', 'password123', 'USER', '1234567891', NOW(), NOW());
+
+-- Попытка вставить другого пользователя с таким же номером телефона
+INSERT INTO "user" (email, password, role, phone, "createdAt", "updatedAt")
+VALUES ('petrova@example.com', 'password123', 'USER', '1234567891', NOW(), NOW());
+
+
+
+
+
+-- лаб 10-11
+ -- Задание 1. Генерация электронной почты для клиентов
+ SELECT
+  id,
+  first_name,
+  last_name,
+  CONCAT(LOWER(last_name), '.', LOWER(first_name), '@example.com') AS generated_email
+FROM "user";
+
+select * from "user"
+
+
+ -- Задание 2. Найти клиентов старше 30 лет и показать их возраст
+ SELECT
+  id,
+  email,
+  DATE_PART('year', AGE(date_of_birth)) AS age
+FROM "user"
+WHERE DATE_PART('year', AGE(date_of_birth)) > 30;
+
+
+
+-- Задание 3: Объединение имени и фамилии пользователя
+SELECT
+	id,
+	CONCAT(first_name, ' ', last_name) AS full_name
+FROM "user";
+
+
+-- Задание 4: Преобразование телефона пользователя в единый формат
+SELECT
+	id,
+	phone,
+	CONCAT('+7', REPLACE(phone, '-', '')) AS formatted_phone
+FROM "user";
+	
+
+-- Задание 5: Формирование имени пользователя в формате И. Фамилия
+SELECT
+	id,
+	CONCAT(
+	LEFT(first_name, 1), '. ',
+	last_name
+	) AS formatted_name
+FROM "user";
+
+
+
+
+-- 12-13
+--  Задание 1: Расчет стоимости смартфона со скидкой
+CREATE OR REPLACE FUNCTION CalculateDiscountedPrice( price DECIMAL(10, 2), discount DECIMAL(5, 2) )
+RETURNS DECIMAL(10, 2)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN price * (1 - discount / 100);
+END;
+$$;
+
+-- Допустим, смартфон стоит 50000 руб, а скидка 10% (0.10)
+SELECT id, name, sale_price, discount,
+       CalculateDiscountedPrice(sale_price, discount) AS discounted_price
+FROM device;
+
+
+
+-- Задание 2: Определение категории смартфона по цене
+CREATE OR REPLACE FUNCTION GetDeviceCategory(price DECIMAL(10, 2))
+RETURNS VARCHAR(20)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  category VARCHAR(20);
+BEGIN
+  IF price < 30000 THEN
+    category := 'Бюджетный';
+  ELSIF price BETWEEN 30000 AND 70000 THEN
+    category := 'Средний';
+  ELSE
+    category := 'Премиум';
+  END IF;
+  RETURN category;
+END;
+$$;
+
+SELECT id, name, sale_price,
+       GetDeviceCategory(sale_price) AS category
+ FROM "device";          
+
+
+
+
+-- Задание 3: Вычисление возраста пользователя
+CREATE OR REPLACE FUNCTION CalculateAge(date_of_birth DATE)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN DATE_PART('year', AGE(date_of_birth));
+END;
+$$;
+
+SELECT id, email, date_of_birth,
+       CalculateAge(date_of_birth) AS age
+FROM "user";
+
+
+
+-- Задание 4: Расчет комиссии интернет-магазина
+CREATE OR REPLACE FUNCTION CalculateCommission(price DECIMAL(10, 2), commission_rate DECIMAL(5, 2))
+RETURNS DECIM  AL(10, 2) 
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN price * commission_rate / 100;
+END;
+$$;
+
+SELECT id, name, sale_price,
+       CalculateCommission(sale_price, 5) AS commission -- 5% фиксировано
+FROM device;
+
+
+
+-- Задание 5: Расчет средней цены смартфона по бренду
+CREATE OR REPLACE FUNCTION GetAveragePriceByBrand(brand_name VARCHAR(50))
+RETURNS DECIMAL(10, 2)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  avg_price DECIMAL(10, 2);
+BEGIN
+  SELECT AVG(sale_price) INTO avg_price
+  FROM device
+  WHERE "brandId" = (SELECT id FROM brand WHERE name = brand_name);
+  
+  RETURN avg_price;
+END;
+$$;
+
+SELECT b.name AS brand_name,
+       GetAveragePriceByBrand(b.name) AS avg_price
+FROM brand b;
+
+
+
+-- Задание 6: Количество заказов пользователя
+CREATE OR REPLACE FUNCTION GetOrderCount(user_id INT)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  order_count INT;
+BEGIN
+  SELECT COUNT(*) INTO order_count
+  FROM "order"
+  WHERE "userId" = user_id;
+  
+  RETURN order_count;
+END;
+$$;
+
+SELECT id, email,
+       GetOrderCount(id) AS order_count
+FROM "user";
+
+
+
+select * from device
+
+
+select * from 'user'
+
+
+

@@ -10,13 +10,28 @@ const {DataTypes} = require('sequelize')
 //         console.error("Ошибка при пересоздании базы данных:", err);
 //     });
 
+// sequelize.sync({ alter: true })
+//   .then(() => {
+//     console.log("Таблицы успешно синхронизированы!");
+//   })
+//   .catch(err => {
+//     console.error("Ошибка при синхронизации: ", err);
+//   });
 
 const User = sequelize.define('user', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    email: {type: DataTypes.STRING, unique: true,},
-    password: {type: DataTypes.STRING},
-    role: {type: DataTypes.STRING, defaultValue: "USER"},
-})
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    email: { type: DataTypes.STRING, unique: true,},
+    password: { type: DataTypes.STRING},
+    role: { type: DataTypes.STRING, defaultValue: "USER"},
+    active: { type: DataTypes.BOOLEAN, defaultValue: true }
+});
+
+
+const Favorite = sequelize.define('favorite', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    deviceId: { type: DataTypes.INTEGER, allowNull: false },
+  });
 
 const Basket = sequelize.define('basket', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
@@ -75,6 +90,27 @@ const TypeBrand = sequelize.define('type_brand', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
 })
 
+const Order = sequelize.define('order', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    userId: { type: DataTypes.INTEGER, allowNull: false },
+    deviceId: { type: DataTypes.INTEGER, allowNull: false },
+    quantity: { type: DataTypes.INTEGER, defaultValue: 1 },
+  });
+  
+const OrderDevice = sequelize.define('order_device', {
+id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+});
+
+Order.belongsToMany(Device, { through: OrderDevice });
+Device.belongsToMany(Order, { through: OrderDevice });
+
+Order.hasMany(OrderDevice);
+OrderDevice.belongsTo(Order);
+
+Device.hasMany(OrderDevice);
+OrderDevice.belongsTo(Device);
+
 User.hasOne(Basket)
 Basket.belongsTo(User)
 
@@ -105,9 +141,23 @@ Brand.belongsToMany(Type, {through: TypeBrand})
 BusinessAnalysis.belongsTo(Device);  // Каждый бизнес-анализ связан с одним устройством
 Device.hasMany(BusinessAnalysis);    // У одного устройства может быть несколько бизнес-анализов
 
+User.hasMany(Favorite);
+Favorite.belongsTo(User);
+
+Device.hasMany(Favorite);
+Favorite.belongsTo(Device);
+
+User.hasMany(Order);
+Order.belongsTo(User);
+
+Device.hasMany(Order);
+Order.belongsTo(Device);
+
+
 
 module.exports = {
     User,
+    Favorite,
     Basket,
     BasketDevice,
     Device,
@@ -116,5 +166,7 @@ module.exports = {
     Rating,
     TypeBrand,
     DeviceInfo,
-    BusinessAnalysis
+    BusinessAnalysis,
+    Order,
+    OrderDevice,
 }

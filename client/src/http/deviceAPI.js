@@ -37,3 +37,23 @@ export const fetchOneDevice = async (id) => {
     const {data} = await $host.get('/api/device/' + id)
     return data
 }
+
+export const addToBasket = async (deviceId) => {
+    const { data } = await $authHost.post('api/basket/add', { deviceId });
+    return data;
+  };
+  
+export const addFavorite = async (deviceId) => {
+const { data } = await $authHost.post('api/favorite', { deviceId });
+return data;
+};
+
+export const removeFavorite = async (deviceId) => {
+const { data } = await $authHost.delete('api/favorite', { data: { deviceId } });
+return data;
+};
+
+export const fetchFavorites = async () => {
+const { data } = await $authHost.get('api/favorite');
+return data;
+};
